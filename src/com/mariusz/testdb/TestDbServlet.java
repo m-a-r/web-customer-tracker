@@ -7,8 +7,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.*;
 
 @WebServlet("/TestDbServlet")
 public class TestDbServlet extends HttpServlet {
@@ -24,9 +23,8 @@ public class TestDbServlet extends HttpServlet {
         try {
 
             Class.forName(driver);
-            connectToJdbc(user, pass, jdbcUrl);
             PrintWriter out = response.getWriter();
-            out.println("Connected successfully to " + jdbcUrl);
+            connectToJdbc(user, pass, jdbcUrl, out);
 
         } catch (Exception exc) {
             exc.printStackTrace();
@@ -34,17 +32,45 @@ public class TestDbServlet extends HttpServlet {
         }
     }
 
-    private void connectToJdbc(String user, String pass, String jdbcUrl) throws ServletException {
+    private void connectToJdbc(String user, String pass, String jdbcUrl, PrintWriter out) throws ServletException, IOException {
 
         System.out.println("Connecting to " + jdbcUrl);
 
-        try (Connection myConn = DriverManager.getConnection(jdbcUrl, user, pass)) {
+        String sql = "SELECT * FROM customer";
 
-            System.out.println("Connected successfully!");
+        try (
+                Connection myConn = DriverManager.getConnection(jdbcUrl, user, pass);
+                Statement myStmt = myConn.createStatement();
+                ResultSet myRs = myStmt.executeQuery(sql)
+        ) {
+
+            String customers = getCustomers(myRs);
+
+            out.println(customers);
+            System.out.println(customers);
+
+            String connectionConfirmation = "Connected successfully to " + jdbcUrl;
+            out.println(connectionConfirmation);
+            System.out.println(connectionConfirmation);
 
         } catch (Exception exc) {
             exc.printStackTrace();
             throw new ServletException(exc);
         }
+    }
+
+    private String getCustomers(ResultSet myRs) throws SQLException {
+
+        String customers = "";
+
+        while (myRs.next()) {
+            int id = myRs.getInt("id");
+            String firstName = myRs.getString("first_name");
+            String lastName = myRs.getString("last_name");
+            String email = myRs.getString("email");
+            customers += (id + ", " + firstName + " " + lastName + ", " + email + "\n");
+        }
+
+        return customers;
     }
 }
